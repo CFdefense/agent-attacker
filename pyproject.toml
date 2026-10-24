@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adaptive-eval"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.3.3",
+    "torch>=2.14.1",
+    "transformers>=5.20.2",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.basedpyright]
+include = ["src"]
+extraPaths = ["src"]
+pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "recommended"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.40.2",
+    "pandas-stubs>=2.3.3.260113",
+]
