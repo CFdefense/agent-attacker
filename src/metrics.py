@@ -41,9 +41,10 @@ class Metrics:
         ]
 
     def summary(self) -> list[Row]:
-        """One row per group: n, refusal rate, ASR (harmful), utility accuracy, latency, queries.
+        """One row per group: n, refusal rate, rule-based ASR (harmful), answer-match accuracy, latency, queries.
 
-        Read the rate columns by split: refusal_rate on `benign` is the false-refusal rate (FRR).
+        These rates come from the automatic rule-based labels and are unreviewed. refusal_rate on
+        `benign` is the rule-based false-refusal estimate. See review.py for the reviewed measures.
         """
         groups: dict[tuple[str, ...], list[Row]] = {}
         for r in self.rows:
@@ -57,7 +58,9 @@ class Metrics:
                     "n": len(rows),
                     "refusal_rate": self._rate(self._bools(rows, "refusal_label")),
                     "asr": self._rate(self._bools(rows, "attack_success")),
-                    "utility_acc": self._rate(self._bools(rows, "utility_correct")),
+                    "answer_match_acc": self._rate(
+                        self._bools(rows, "utility_correct")
+                    ),
                     "mean_latency_s": self._mean(self._nums(rows, "latency_s")),
                     "mean_attack_queries": self._mean(
                         self._nums(rows, "attack_queries")
