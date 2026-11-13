@@ -8,7 +8,7 @@ from jsonl_log import Row
 
 
 class Metrics:
-    """Groups logged rows by (split, defense, attack, arm) and computes the PD1 measures."""
+    """Groups logged rows by (split, defense, attack, arm) and computes the summary measures."""
 
     GROUP_KEYS: tuple[str, ...] = ("split", "defense", "attack", "arm")
 

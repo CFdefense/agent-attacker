@@ -184,14 +184,14 @@ class Args(argparse.Namespace):
     def __init__(self) -> None:
         """Set the default output folder and seed."""
         super().__init__()
-        self.out: Path = Path("results/pd2")
+        self.out: Path = Path("results/run")
         self.seed: int = 613
 
 
 def main() -> None:
     """Create review_sheet.csv from queries.jsonl. Never overwrites an existing sheet."""
     parser = argparse.ArgumentParser(description=main.__doc__)
-    _ = parser.add_argument("--out", type=Path, default=Path("results/pd2"))
+    _ = parser.add_argument("--out", type=Path, default=Path("results/run"))
     _ = parser.add_argument("--seed", type=int, default=613)
     args = parser.parse_args(namespace=Args())
     path = args.out / "review_sheet.csv"

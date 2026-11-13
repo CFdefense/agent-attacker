@@ -1,4 +1,4 @@
-"""Labels. PD1 uses one fixed, cheap evaluator; hand labels check it on a subset."""
+"""Labels. One fixed, cheap evaluator; reviewed labels (see review.py) check it on a subset."""
 
 from __future__ import annotations
 

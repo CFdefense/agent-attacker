@@ -11,7 +11,7 @@ The plan is to compare a static attack with an adaptive one against a defended o
 ## Progress
 
 - **Deliverable 0** (framing and dependency map): done.
-- **Deliverable 1** (feasibility notebook, due Oct 25): the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `results/pd1/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
+- **Deliverable 1** (feasibility notebook, due Oct 25): the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `results/run/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
 
 ### Left to do
 
@@ -41,7 +41,7 @@ uv sync
 ## Run
 
 ```
-uv run python src/main.py --out results/pd1 --budget 50
+uv run python src/main.py --out results/run --budget 50
 ```
 
 Runs the baseline, the defense and the static versus adaptive attack, then writes `summary.csv`. It resumes from the logs in `--out`.
