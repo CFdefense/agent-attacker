@@ -172,8 +172,13 @@ class PromptSetBuilder:
             col("source_label"),
         )
         return [
-            PromptRow(str(i), str(s), str(p), str(c), a, src)
-            for i, s, p, c, a, src in zip(
-                ids, splits, prompts, cats, answers, sources, strict=True
+            PromptRow(
+                str(ids[k]),
+                str(splits[k]),
+                str(prompts[k]),
+                str(cats[k]),
+                answers[k],
+                sources[k],
             )
+            for k in range(len(ids))
         ]
