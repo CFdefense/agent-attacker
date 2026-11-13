@@ -64,6 +64,8 @@ uv run basedpyright
   - `run.py` Sends a prompt through a defense and the model, labels the result, and records it
   - `jsonl_log.py` Saves every result to disk so a run can be stopped and resumed
   - `metrics.py` Turns the saved results into the summary numbers
+  - `review.py` Builds the sheet of responses to check by hand and summarizes the checked labels next to the automatic ones
+- `tests/` Unit tests that run without downloading the model
 - `notebooks/` The Deliverable 1 write-up with the results
 - `results/` Saved outputs from runs: every prompt, response, label and timing, plus the summary table
 - `docs/` The Deliverable 0 submission and the project plan
