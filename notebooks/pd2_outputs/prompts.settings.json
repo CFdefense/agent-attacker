@@ -1,0 +1,9 @@
+{
+  "seed": 613,
+  "n_harmful": 15,
+  "n_safe": 20,
+  "n_unsafe_contrast": 5,
+  "harmbench_commit": "8e1604d1171fe8a48d8febecd22f600e462bdcdd",
+  "xstest_commit": "d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d",
+  "exclude_ids": []
+}
