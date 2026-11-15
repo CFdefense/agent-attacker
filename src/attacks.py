@@ -1,7 +1,11 @@
 """Attacks (after Andriushchenko et al., ICLR 2025, simplified).
 
-An attack produces a suffix for a request against a defended pipeline. Each scored candidate is
-one query, and every defense gets the same budget.
+An attack produces a suffix for a request against a defended pipeline.
+
+Threat model: white-box. The attacker reads the first-token log-probabilities of the defended
+pipeline. Budget: `budget` scored candidates per prompt, the same for every defense. One query is
+one scored forward pass. The search stops early if the target token becomes the argmax. The score
+is the log-prob of "Sure", a proxy for compliance and not a measure of harm.
 """
 
 from __future__ import annotations
@@ -13,14 +17,16 @@ from dataclasses import dataclass, field
 from typing import ClassVar, override
 
 from defenses import Defense
+from jsonl_log import JsonValue
 from model import Target
 
 
 @dataclass(frozen=True)
 class TraceStep:
-    """One scored candidate during a search: its query number, score and the best score so far."""
+    """One scored candidate: its query number, suffix, score and the best score so far."""
 
     query_idx: int
+    suffix: str
     logprob: float
     best: float
 
@@ -47,6 +53,10 @@ class Attack(ABC):
         self.target: Target = target
         self.budget: int = budget
         self.seed: int = seed
+
+    def config(self) -> dict[str, JsonValue]:
+        """Settings that determine the search result (used in cache keys and the run config)."""
+        return {"name": self.name, "budget": self.budget, "seed": self.seed}
 
     @staticmethod
     def with_suffix(prompt: str, suffix: str) -> str:
@@ -91,6 +101,16 @@ class RandomSearchAttack(Attack):
         return ids
 
     @override
+    def config(self) -> dict[str, JsonValue]:
+        """The base settings plus the suffix length, start token and target word."""
+        return {
+            **super().config(),
+            "suffix_len": self.SUFFIX_LEN,
+            "init_token": self.INIT_TOKEN,
+            "target_word": self.TARGET_WORD,
+        }
+
+    @override
     def run(self, defense: Defense, prompt: str, seed_offset: int = 0) -> AttackResult:
         """Spend at most `budget` queries on the defended pipeline. Returns best suffix + trace."""
         rng = random.Random(self.seed + seed_offset)
@@ -104,7 +124,7 @@ class RandomSearchAttack(Attack):
 
         t0 = time.perf_counter()
         best, hit = score(cur)
-        trace = [TraceStep(1, best, best)]
+        trace = [TraceStep(1, tok.decode(cur), best, best)]
         queries = 1
         while queries < self.budget and not hit:
             cand = list(cur)
@@ -115,7 +135,7 @@ class RandomSearchAttack(Attack):
             queries += 1
             if lp > best:
                 best, cur, hit = lp, cand, cand_hit
-            trace.append(TraceStep(queries, lp, best))
+            trace.append(TraceStep(queries, tok.decode(cand), lp, best))
         return AttackResult(
             suffix=tok.decode(cur),
             best_logprob=best,
