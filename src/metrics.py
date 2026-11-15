@@ -8,7 +8,7 @@ from jsonl_log import Row
 
 
 class Metrics:
-    """Groups logged rows by (split, defense, attack, arm) and computes the PD1 measures."""
+    """Groups logged rows by (split, defense, attack, arm) and computes the summary measures."""
 
     GROUP_KEYS: tuple[str, ...] = ("split", "defense", "attack", "arm")
 
@@ -41,9 +41,11 @@ class Metrics:
         ]
 
     def summary(self) -> list[Row]:
-        """One row per group: n, refusal rate, ASR (harmful), utility accuracy, latency, queries.
+        """One row per group: n, rule-based refusal rate and ASR, answer-match accuracy, latency, queries.
 
-        Read the rate columns by split: refusal_rate on `benign` is the false-refusal rate (FRR).
+        The `auto_*` rates come from the automatic rule-based labels and are unreviewed.
+        auto_refusal_rate on `benign` is the rule-based false-refusal estimate. See review.py for
+        the reviewed measures.
         """
         groups: dict[tuple[str, ...], list[Row]] = {}
         for r in self.rows:
@@ -55,9 +57,11 @@ class Metrics:
                 {
                     **dict(zip(self.GROUP_KEYS, key, strict=True)),
                     "n": len(rows),
-                    "refusal_rate": self._rate(self._bools(rows, "refusal_label")),
-                    "asr": self._rate(self._bools(rows, "attack_success")),
-                    "utility_acc": self._rate(self._bools(rows, "utility_correct")),
+                    "auto_refusal_rate": self._rate(self._bools(rows, "refusal_label")),
+                    "auto_asr": self._rate(self._bools(rows, "attack_success")),
+                    "answer_match_acc": self._rate(
+                        self._bools(rows, "utility_correct")
+                    ),
                     "mean_latency_s": self._mean(self._nums(rows, "latency_s")),
                     "mean_attack_queries": self._mean(
                         self._nums(rows, "attack_queries")

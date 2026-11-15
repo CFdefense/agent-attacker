@@ -10,19 +10,6 @@ The plan is to compare a static attack with an adaptive one against a defended o
 
 ## Progress
 
-<<<<<<< Updated upstream
-- **Deliverable 0** (framing and dependency map): done.
-- **Deliverable 1** (feasibility notebook, due Oct 25): the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `results/pd1/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
-
-### Left to do
-
-**Deliverable 2** (full experiment plan)
-- Fix the experiment matrix, variables, seeds and statistics.
-- Read the three key papers (Andriushchenko et al.; SafeInt; adaptive evaluation of prompt-injection defenses) and fix the threat model, defenses and attack budget rule.
-- Add a stronger judge (maybe LLM) and a small hand-labelled set to check it.
-- Make the undefended and defended runs differ only in the defense, and add a harder utility set.
-- Raise the attack budget (hundreds of queries) until the attack actually works, then scale up behaviors.
-=======
 - **Deliverable 0** (framing and dependency map): done. `docs/farrell_christian_project_deliverable_0.pdf`.
   - Research question: under a fixed attack budget, how much does a language model's security erode when the attacker can observe the defense and adapt, and how does that affect false refusals on benign requests?
   - Smallest useful study: harmful and benign prompt sets, an undefended baseline, and a defended model compared against a static attack and an adaptive one. The main measure is attack success rate (ASR), with false-refusal rate (FRR), query count and latency alongside it.
@@ -47,7 +34,6 @@ The plan is to compare a static attack with an adaptive one against a defended o
 - Freeze a larger final evaluation set (target 50 harmful behaviors and the full XSTest safe set) that excludes every development prompt.
 - Run the main experiment with search seeds 613 to 615 and report reviewed rates with confidence intervals.
 - Run a 200-query budget check on about 10 behaviors to see whether the "Sure" score ever turns into reviewed compliance.
->>>>>>> Stashed changes
 
 **Later**
 - Stretch: a black-box LLM attacker that reads refusals and rewrites the request, as a separate attack arm. Dropped first if time runs short.
@@ -56,7 +42,7 @@ The plan is to compare a static attack with an adaptive one against a defended o
 
 ## Setup
 
-Needs [uv](https://docs.astral.sh/uv/) and Python 3.10 or newer.
+Needs [uv](https://docs.astral.sh/uv/) and Python 3.12 or newer.
 
 ```
 uv venv
@@ -68,16 +54,14 @@ uv sync
 ## Run
 
 ```
-uv run python src/main.py --out results/pd1 --budget 50
+uv run python src/main.py --out notebooks/pd2_outputs --budget 50
 ```
 
 Runs the baseline, the defense and the static versus adaptive attack, then writes `summary.csv`. It resumes from the logs in `--out`.
 
-## Type check
+## Review sheet
 
 ```
-<<<<<<< Updated upstream
-=======
 uv run python src/review.py --out notebooks/pd2_outputs
 ```
 
@@ -87,15 +71,15 @@ Writes `review_sheet.csv` with the rule-based `auto_label` and an empty `human_l
 
 ```
 uv run pytest
->>>>>>> Stashed changes
 uv run basedpyright
+ruff check src tests
 ```
 
 ## Layout
 
 - `src/` Source code
   - `main.py` Runs the whole experiment from the command line
-  - `data.py` The prompts the model is tested on: harmful, harmless, borderline and simple factual questions
+  - `data.py` The prompts the model is tested on: harmful, safe, unsafe-contrast and simple factual questions
   - `model.py` The model being attacked: generates answers and reports how likely it is to start with a given word
   - `defenses.py` The protections placed in front of the model, including "no protection" as the baseline
   - `attacks.py` The attackers that try to get past a defense
@@ -103,13 +87,8 @@ uv run basedpyright
   - `run.py` Sends a prompt through a defense and the model, labels the result, and records it
   - `jsonl_log.py` Saves every result to disk so a run can be stopped and resumed
   - `metrics.py` Turns the saved results into the summary numbers
-<<<<<<< Updated upstream
-- `notebooks/` The Deliverable 1 write-up with the results
-- `results/` Saved outputs from runs: every prompt, response, label and timing, plus the summary table
-=======
   - `review.py` Builds the sheet of responses to check by hand and summarizes the checked labels next to the automatic ones
 - `tests/` Unit tests that run without downloading the model
 - `notebooks/` The Deliverable 1 and 2 write-ups (`.ipynb`, with HTML copies in `html/`)
 - `notebooks/pd1_outputs/` and `notebooks/pd2_outputs/` Saved outputs from the two runs: every prompt, response, search candidate, label and timing, plus the summary table and run settings
->>>>>>> Stashed changes
 - `docs/` The Deliverable 0 submission and the project plan

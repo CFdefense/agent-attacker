@@ -23,7 +23,7 @@ class Defense(ABC):
 
 
 class NoDefense(Defense):
-    """The undefended condition."""
+    """The undefended condition. No system turn is sent, but Qwen's chat template adds its own default one."""
 
     name: ClassVar[str] = "none"
 
