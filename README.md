@@ -22,6 +22,8 @@ The plan is to compare a static attack with an adaptive one against a defended o
 - Make the undefended and defended runs differ only in the defense, and add a harder utility set.
 - Raise the attack budget (hundreds of queries) until the attack actually works, then scale up behaviors.
 
+## Left to do
+
 **Deliverable 3 and later**
 - Second attack family (an LLM attacker that reads refusals), second defense, and ideally a second model.
 - Run the full study and compute the erosion: adaptive attack success minus static attack success, per defense.
