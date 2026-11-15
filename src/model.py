@@ -59,6 +59,7 @@ class CausalLM(Protocol):
         attention_mask: torch.Tensor,
         max_new_tokens: int,
         do_sample: bool,
+        repetition_penalty: float,
         pad_token_id: int | None,
     ) -> torch.Tensor:
         """Generate a continuation of `input_ids`."""
@@ -91,6 +92,10 @@ class Target:
         self.model_id: str = model_id
         self.revision: str | None = revision
         self.device: str = device or self.pick_device()
+        # Qwen's own generation_config sets this to 1.1, and Hugging Face applies it unless told
+        # otherwise. It is passed explicitly so the setting is visible and saved with the results.
+        # The first-token score in `first_token_score` uses raw log-probabilities without it.
+        self.repetition_penalty: float = 1.1
         self.dtype: torch.dtype = (
             torch.float32 if self.device == "cpu" else torch.float16
         )
@@ -127,7 +132,7 @@ class Target:
         return {k: v.to(self.device) for k, v in enc.items()}
 
     def generate(self, messages: Messages, max_new_tokens: int = 128) -> Generation:
-        """Greedy decoding. Returns text, token counts and wall-clock latency."""
+        """Greedy decoding (no sampling) with a repetition penalty. Returns text, token counts and latency."""
         ids = self._ids(messages)
         n_in = int(ids["input_ids"].shape[1])
         t0 = time.perf_counter()
@@ -137,6 +142,7 @@ class Target:
                 attention_mask=ids["attention_mask"],
                 max_new_tokens=max_new_tokens,
                 do_sample=False,
+                repetition_penalty=self.repetition_penalty,
                 pad_token_id=self.tok.eos_token_id,
             )
         latency = time.perf_counter() - t0

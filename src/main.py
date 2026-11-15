@@ -60,7 +60,12 @@ class Experiment:
             "revision": target.revision,
             "device": target.device,
             "dtype": str(target.dtype),
-            "decoding": {"strategy": "greedy", "max_new_tokens": MAX_NEW_TOKENS},
+            "decoding": {
+                "strategy": "greedy (do_sample=False)",
+                "repetition_penalty": target.repetition_penalty,
+                "max_new_tokens": MAX_NEW_TOKENS,
+            },
+            "undefended_system_prompt": "none sent; the Qwen chat template adds its own default",
             "seed": SEED,
             "n_attack_behaviors": N_ATTACK_BEHAVIORS,
             "attack": attack.config(),
@@ -120,7 +125,8 @@ class Experiment:
                     attack_queries=n,
                 )
 
-        self._write_summary(Metrics(runner.log.rows).summary())
+        # Only rows this run produced or reused, so rows saved under other settings are excluded.
+        self._write_summary(Metrics(runner.touched).summary())
 
     def _write_summary(self, summary: list[Row]) -> None:
         """Save the summary rows to summary.csv in the output folder and print them."""

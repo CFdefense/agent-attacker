@@ -17,3 +17,5 @@ def test_utility_column_is_answer_match() -> None:
     out = Metrics(rows).summary()[0]
     assert out["answer_match_acc"] == 1.0
     assert "utility_acc" not in out
+    assert "auto_asr" in out and "auto_refusal_rate" in out
+    assert "asr" not in out and "refusal_rate" not in out
