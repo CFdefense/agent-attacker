@@ -40,6 +40,9 @@ class Runner:
         self.run_id: str = run_id
         self.judge: Judge = judge or RefusalStringJudge()
         self.max_new_tokens: int = max_new_tokens
+        # Rows this runner returned (new or cached). Summaries use these, not the whole log, so
+        # old rows saved under other settings are never mixed in.
+        self.touched: list[Row] = []
         # Everything that changes a result besides the prompt, defense and attack. Hashed into
         # every cache key so a resumed run cannot reuse rows from a different setup.
         self.settings: dict[str, JsonValue] = {
@@ -47,9 +50,10 @@ class Runner:
             "revision": target.revision,
             "dtype": str(target.dtype),
             "decoding": "greedy",
+            "repetition_penalty": target.repetition_penalty,
             "max_new_tokens": max_new_tokens,
             "seed": seed,
-            "judge": self.judge.name,
+            "judge": dict(self.judge.config()),
         }
 
     def query(
@@ -63,12 +67,13 @@ class Runner:
     ) -> Row:
         """Generate one response, label it and append it to the log (skipped if already logged)."""
         fp = fingerprint({**self.settings, "defense": dict(defense.config())})
-        sfx = hashlib.sha256(suffix.encode("utf-8")).hexdigest()[:8]
-        key = f"{self.run_id}|{fp}|{defense.name}|{attack}|{arm}|{row.prompt_id}|{sfx}"
+        prompt = Attack.with_suffix(row.prompt, suffix)
+        text_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:8]
+        key = f"{self.run_id}|{fp}|{defense.name}|{attack}|{arm}|{row.prompt_id}|{text_hash}"
         cached = self.log.get(key)
         if cached is not None:
+            self.touched.append(cached)
             return cached
-        prompt = Attack.with_suffix(row.prompt, suffix)
         out = self.target.generate(
             defense.messages(prompt), max_new_tokens=self.max_new_tokens
         )
@@ -78,6 +83,7 @@ class Runner:
             "fingerprint": fp,
             "prompt_id": row.prompt_id,
             "split": row.split,
+            "source_label": row.source_label,
             "defense": defense.name,
             "attack": attack,
             "arm": arm,
@@ -99,6 +105,7 @@ class Runner:
             "tokens_out": out.tokens_out,
         }
         self.log.append(rec)
+        self.touched.append(rec)
         return rec
 
     def run_split(self, defense: Defense, prompts: Iterable[PromptRow]) -> list[Row]:
@@ -121,16 +128,25 @@ class Runner:
         if cached is not None:
             return cached
         res = attack.run(defense, row.prompt)
-        candidates: list[JsonValue] = [
+        # One short line per scored candidate, then one summary line for the search. The summary
+        # line carries the cache key and is written last, in the same write. Candidate lines name
+        # it in `belongs_to`, and JsonlLog ignores (and removes) candidates whose summary line is
+        # missing, so an interrupted write leaves no half-saved search.
+        candidates: list[Row] = [
             {
+                "kind": "candidate",
+                "belongs_to": key,
+                "prompt_id": row.prompt_id,
+                "optimized_against": defense.name,
                 "query_idx": t.query_idx,
-                "suffix": t.suffix,
                 "logprob": t.logprob,
                 "best": t.best,
+                "suffix": t.suffix,
             }
             for t in res.trace
         ]
         rec: Row = {
+            "kind": "result",
             "key": key,
             "run_id": self.run_id,
             "fingerprint": fp,
@@ -144,7 +160,6 @@ class Runner:
             "reached_argmax": res.reached_argmax,
             "queries": res.queries,
             "latency_s": round(res.latency_s, 4),
-            "candidates": candidates,
         }
-        self.search_log.append(rec)
+        self.search_log.extend([*candidates, rec])
         return rec

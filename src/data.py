@@ -5,6 +5,8 @@ Sources are pinned to the commit hashes verified on 2026-10-22.
 
 from __future__ import annotations
 
+import json
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, cast
@@ -67,8 +69,13 @@ class PromptSetBuilder:
         n_safe: int = 20,
         n_unsafe_contrast: int = 5,
         cache: Path | str | None = None,
+        exclude_ids: Collection[str] = (),
     ) -> None:
-        """Set the sampling seed, how many prompts to draw per split, and an optional CSV cache."""
+        """Set the sampling seed, how many prompts to draw per split, an optional CSV cache, and ids to leave out.
+
+        `exclude_ids` keeps a final evaluation draw disjoint from the development prompts.
+        """
+        self.exclude_ids: frozenset[str] = frozenset(exclude_ids)
         self.seed: int = seed
         self.n_harmful: int = n_harmful
         self.n_safe: int = n_safe
@@ -84,6 +91,7 @@ class PromptSetBuilder:
         """Standard (no-context) HarmBench behaviors, sampled with a fixed seed."""
         df = self._read_csv(self.HARMBENCH_URL)
         df = df[(df["FunctionalCategory"] == "standard") & df["Behavior"].notna()]
+        df = df[~("hb_" + df["BehaviorID"]).isin(self.exclude_ids)]
         df = df.drop_duplicates("Behavior").sample(
             n=self.n_harmful, random_state=self.seed
         )
@@ -103,6 +111,7 @@ class PromptSetBuilder:
         The unsafe contrast prompts are NOT the safe boundary set used to estimate false refusal.
         """
         df = self._read_csv(self.XSTEST_URL)
+        df = df[~("xs_" + df["id"].astype(str)).isin(self.exclude_ids)]
         parts = (
             (
                 "benign",
@@ -144,6 +153,11 @@ class PromptSetBuilder:
     def build(self) -> pd.DataFrame:
         """All splits in one dataframe; read from the cache if present, else build and save it."""
         if self.cache is not None and self.cache.exists():
+            saved = self._settings_file()
+            if not saved.exists() or saved.read_text(encoding="utf-8") != self._settings_json():
+                raise ValueError(
+                    f"{self.cache} was built with different settings; delete it to rebuild"
+                )
             return pd.read_csv(self.cache)
         df = pd.concat(
             [self.harmful(), self.benign_and_contrast(), self.utility()],
@@ -152,7 +166,28 @@ class PromptSetBuilder:
         if self.cache is not None:
             _ = self.cache.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(self.cache, index=False)
+            _ = self._settings_file().write_text(self._settings_json(), encoding="utf-8")
         return df
+
+    def _settings_json(self) -> str:
+        """The settings that decide which prompts are drawn, as JSON."""
+        return json.dumps(
+            {
+                "seed": self.seed,
+                "n_harmful": self.n_harmful,
+                "n_safe": self.n_safe,
+                "n_unsafe_contrast": self.n_unsafe_contrast,
+                "harmbench_commit": self.HARMBENCH_COMMIT,
+                "xstest_commit": self.XSTEST_COMMIT,
+                "exclude_ids": sorted(self.exclude_ids),
+            },
+            indent=2,
+        )
+
+    def _settings_file(self) -> Path:
+        """Where the settings of the cached prompt file are saved, next to the cache."""
+        assert self.cache is not None
+        return self.cache.with_suffix(".settings.json")
 
     @staticmethod
     def rows(df: pd.DataFrame) -> list[PromptRow]:

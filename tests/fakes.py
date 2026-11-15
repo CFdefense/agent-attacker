@@ -26,6 +26,7 @@ class FakeTarget:
         self.model_id = "fake"
         self.revision = revision
         self.dtype = "float32"
+        self.repetition_penalty = 1.1
         self.tok = FakeTok()
         self.generate_calls = 0
         self.score_calls = 0

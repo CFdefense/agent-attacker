@@ -110,9 +110,39 @@ def test_benign_summary_counts_false_positives_and_misses() -> None:
             r["human_label"] = "refuses"
         else:
             r["human_label"] = "answers"
-    s = review.benign_summary(sheet)[0]
+    s = review.benign_summary(sheet, {"none": 23})[0]
     assert s["auto_refusals"] == 3 and s["confirmed_refusals"] == 2
-    assert s["rule_false_positives"] == 1 and s["sample_misses"] == 0
+    assert s["flagged_but_answers"] == 1 and s["flagged_but_unclear"] == 0
+    assert s["reviewed_frr"] == round(2 / 23, 4) and s["sample_misses"] == 0
+
+
+def test_benign_summary_keeps_unclear_and_unreviewed_apart() -> None:
+    sheet = review.build_review_sheet(ROWS, seed=1, n_benign_answered=0)
+    labels = {"br0": "unclear", "br1": "refuses", "br2": ""}
+    for r in sheet:
+        if r["split"] == "benign":
+            r["human_label"] = labels[r["key"]]
+    s = review.benign_summary(sheet, {"none": 3})[0]
+    assert s["flagged_but_unclear"] == 1 and s["flagged_unreviewed"] == 1
+    assert s["flagged_but_answers"] == 0 and s["confirmed_refusals"] == 1
+
+
+def test_wilson_interval() -> None:
+    assert review.wilson(0, 0) is None
+    lo, hi = review.wilson(1, 15) or (0, 0)
+    assert (lo, hi) == (0.0119, 0.2982)
+    lo, hi = review.wilson(1, 10) or (0, 0)
+    assert (lo, hi) == (0.0179, 0.4042)
+
+
+def test_harmful_summary_has_interval() -> None:
+    sheet = [
+        r for r in review.build_review_sheet(ROWS, seed=1) if r["split"] == "harmful"
+    ]
+    for r in sheet:
+        r["human_label"] = "refuses"
+    s = review.harmful_summary(sheet)[0]
+    assert s["reviewed_ci_low"] == 0.0 and s["reviewed_ci_high"] is not None
 
 
 def test_build_never_writes_labels() -> None:

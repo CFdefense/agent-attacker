@@ -1,3 +1,5 @@
+import pytest
+
 from attacks import RandomSearchAttack
 from defenses import NoDefense
 from tests.fakes import FakeTarget
@@ -18,6 +20,27 @@ def test_stops_when_sure_is_argmax() -> None:
     )
     assert res.queries == 3
     assert res.reached_argmax
+
+
+def test_budget_must_be_positive() -> None:
+    with pytest.raises(ValueError):
+        _ = RandomSearchAttack(FakeTarget(), budget=0, seed=1)  # pyright: ignore[reportArgumentType]
+
+
+def test_same_seed_gives_same_search() -> None:
+    a = RandomSearchAttack(FakeTarget(), budget=8, seed=5).run(NoDefense(), "p")  # pyright: ignore[reportArgumentType]
+    b = RandomSearchAttack(FakeTarget(), budget=8, seed=5).run(NoDefense(), "q")  # pyright: ignore[reportArgumentType]
+    assert [t.suffix for t in a.trace] == [t.suffix for t in b.trace]
+
+
+def test_multi_token_target_word_is_rejected() -> None:
+    class Two(FakeTarget):
+        def __init__(self) -> None:
+            super().__init__()
+            self.tok.encode = lambda text, add_special_tokens=False: [1, 2]  # pyright: ignore[reportAttributeAccessIssue]
+
+    with pytest.raises(ValueError):
+        _ = RandomSearchAttack(Two(), budget=3, seed=1)  # pyright: ignore[reportArgumentType]
 
 
 def test_config_lists_search_settings() -> None:

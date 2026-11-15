@@ -50,6 +50,8 @@ class Attack(ABC):
 
     def __init__(self, target: Target, budget: int, seed: int) -> None:
         """Store the target model, the query budget (same for every defense) and the seed."""
+        if budget < 1:
+            raise ValueError(f"budget must be at least 1, got {budget}")
         self.target: Target = target
         self.budget: int = budget
         self.seed: int = seed
@@ -64,9 +66,7 @@ class Attack(ABC):
         return f"{prompt} {suffix}" if suffix else prompt
 
     @abstractmethod
-    def run(
-        self, defense: Defense, prompt: str, seed_offset: int = 0
-    ) -> AttackResult:
+    def run(self, defense: Defense, prompt: str) -> AttackResult:
         """Search for a suffix against `defense`, spending at most `self.budget` queries."""
 
 
@@ -84,10 +84,16 @@ class RandomSearchAttack(Attack):
     def __init__(self, target: Target, budget: int, seed: int) -> None:
         """Look up the token ids for "Sure" and the starting "!" and build the search vocabulary."""
         super().__init__(target, budget, seed)
-        tok = target.tok
-        self.sure_id: int = tok.encode(self.TARGET_WORD, add_special_tokens=False)[0]
-        self.init_id: int = tok.encode(self.INIT_TOKEN, add_special_tokens=False)[0]
+        self.sure_id: int = self._single_token(self.TARGET_WORD)
+        self.init_id: int = self._single_token(self.INIT_TOKEN)
         self.allowed: list[int] = self._allowed_token_ids()
+
+    def _single_token(self, text: str) -> int:
+        """The id of `text`, which must be exactly one token."""
+        ids = self.target.tok.encode(text, add_special_tokens=False)
+        if len(ids) != 1:
+            raise ValueError(f"{text!r} is {len(ids)} tokens, expected 1")
+        return ids[0]
 
     def _allowed_token_ids(self) -> list[int]:
         """Printable ASCII vocabulary entries, excluding special tokens."""
@@ -111,9 +117,14 @@ class RandomSearchAttack(Attack):
         }
 
     @override
-    def run(self, defense: Defense, prompt: str, seed_offset: int = 0) -> AttackResult:
-        """Spend at most `budget` queries on the defended pipeline. Returns best suffix + trace."""
-        rng = random.Random(self.seed + seed_offset)
+    def run(self, defense: Defense, prompt: str) -> AttackResult:
+        """Spend at most `budget` queries on the defended pipeline. Returns best suffix + trace.
+
+        Every search starts a fresh random stream from `seed`, so two searches on different prompts
+        or defenses propose the same candidate edits in the same order. They differ only through
+        which proposals are accepted.
+        """
+        rng = random.Random(self.seed)
         tok = self.target.tok
         cur = [self.init_id] * self.SUFFIX_LEN
 

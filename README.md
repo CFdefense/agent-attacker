@@ -10,12 +10,15 @@ The plan is to compare a static attack with an adaptive one against a defended o
 
 ## Progress
 
-- **Deliverable 0** (framing and dependency map): Writeup - done.
-- **Deliverable 1** (feasibility notebook) - the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `notebooks/pd1_outputs/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
+- **Deliverable 0** (framing and dependency map): done.
+- **Deliverable 1** (feasibility notebook, due Oct 25): the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `notebooks/pd1_outputs/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
+
+### Left to do
+
 **Deliverable 2** (full experiment plan)
 - Fix the experiment matrix, variables, seeds and statistics.
 - Read the three key papers (Andriushchenko et al.; SafeInt; adaptive evaluation of prompt-injection defenses) and fix the threat model, defenses and attack budget rule.
-- Add a stronger judge (maybe LLM) and a small hand-labelled set to check it.
+- Add a stronger judge (maybe LLM) and check it against the reviewed labels.
 - Make the undefended and defended runs differ only in the defense, and add a harder utility set.
 - Raise the attack budget (hundreds of queries) until the attack actually works, then scale up behaviors.
 
@@ -28,7 +31,7 @@ The plan is to compare a static attack with an adaptive one against a defended o
 
 ## Setup
 
-Needs [uv](https://docs.astral.sh/uv/) and Python 3.10 or newer.
+Needs [uv](https://docs.astral.sh/uv/) and Python 3.12 or newer.
 
 ```
 uv venv
@@ -40,22 +43,32 @@ uv sync
 ## Run
 
 ```
-uv run python src/main.py --out results/run --budget 50
+uv run python src/main.py --out notebooks/pd2_outputs --budget 50
 ```
 
 Runs the baseline, the defense and the static versus adaptive attack, then writes `summary.csv`. It resumes from the logs in `--out`.
 
-## Type check
+## Review sheet
 
 ```
+uv run python src/review.py --out notebooks/pd2_outputs
+```
+
+Writes `review_sheet.csv` with the rule-based `auto_label` and an empty `human_label` column. It never overwrites an existing sheet.
+
+## Tests and checks
+
+```
+uv run pytest
 uv run basedpyright
+ruff check src tests
 ```
 
 ## Layout
 
 - `src/` Source code
   - `main.py` Runs the whole experiment from the command line
-  - `data.py` The prompts the model is tested on: harmful, harmless, borderline and simple factual questions
+  - `data.py` The prompts the model is tested on: harmful, safe, unsafe-contrast and simple factual questions
   - `model.py` The model being attacked: generates answers and reports how likely it is to start with a given word
   - `defenses.py` The protections placed in front of the model, including "no protection" as the baseline
   - `attacks.py` The attackers that try to get past a defense
@@ -66,5 +79,5 @@ uv run basedpyright
   - `review.py` Builds the sheet of responses to check by hand and summarizes the checked labels next to the automatic ones
 - `tests/` Unit tests that run without downloading the model
 - `notebooks/` The Deliverable 1 write-up with the results
-- `results/` Saved outputs from runs: every prompt, response, label and timing, plus the summary table
+- `notebooks/pd1_outputs/` and `notebooks/pd2_outputs/` Saved outputs from the two runs: every prompt, response, label and timing, plus the summary table
 - `docs/` The Deliverable 0 submission and the project plan
