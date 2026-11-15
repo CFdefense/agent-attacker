@@ -10,17 +10,16 @@ The plan is to compare a static attack with an adaptive one against a defended o
 
 ## Progress
 
-- **Deliverable 0** (framing and dependency map): done.
-- **Deliverable 1** (feasibility notebook, due Oct 25): the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `results/run/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
-
-### Left to do
-
+- **Deliverable 0** (framing and dependency map): Writeup - done.
+- **Deliverable 1** (feasibility notebook) - the pipeline runs end to end on one small model (Qwen2.5-1.5B-Instruct) with HarmBench and XSTest prompts, an undefended baseline, a safety system prompt defense, a random-search suffix attack, and logged results in `notebooks/pd1_outputs/`. Verdict so far is inconclusive: with a 50-query budget the attack was too weak to show a static versus adaptive gap, and the judge is a simple refusal-string check.
 **Deliverable 2** (full experiment plan)
 - Fix the experiment matrix, variables, seeds and statistics.
 - Read the three key papers (Andriushchenko et al.; SafeInt; adaptive evaluation of prompt-injection defenses) and fix the threat model, defenses and attack budget rule.
 - Add a stronger judge (maybe LLM) and a small hand-labelled set to check it.
 - Make the undefended and defended runs differ only in the defense, and add a harder utility set.
 - Raise the attack budget (hundreds of queries) until the attack actually works, then scale up behaviors.
+
+## Left to do
 
 **Deliverable 3 and later**
 - Second attack family (an LLM attacker that reads refusals), second defense, and ideally a second model.
